@@ -6,34 +6,35 @@ import math
 import time
 from typing import List, Tuple, Optional
 
-# Initialisation de Pygame
+# Pygame initialization
 pygame.init()
 
-# Constantes
+# Constants
 BOARD_SIZE = 8
-CELL_SIZE = 70
+CELL_SIZE = 80
 BOARD_WIDTH = BOARD_SIZE * CELL_SIZE
 BOARD_HEIGHT = BOARD_SIZE * CELL_SIZE
-SIDEBAR_WIDTH = 200
+SIDEBAR_WIDTH = 280
 WINDOW_WIDTH = BOARD_WIDTH + SIDEBAR_WIDTH
-WINDOW_HEIGHT = BOARD_HEIGHT + 100
+WINDOW_HEIGHT = BOARD_HEIGHT + 120
 FPS = 60
 
-# Couleurs
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-LIGHT_BROWN = (240, 217, 181)
-DARK_BROWN = (181, 136, 99)
-KNIGHT_COLOR = (139, 69, 19)
-PATH_COLOR = (0, 128, 255)
-VISITED_COLOR = (144, 238, 144)
-CURRENT_COLOR = (255, 0, 0)
-BUTTON_COLOR = (70, 130, 180)
-BUTTON_HOVER_COLOR = (100, 149, 237)
-TEXT_COLOR = (50, 50, 50)
+# Vintage Color Palette
+CREAM = (245, 238, 220)
+LIGHT_SQUARE = (240, 230, 210)
+DARK_SQUARE = (88, 70, 120)  # Purple matching knight
+KNIGHT_PURPLE = (88, 70, 120)
+PATH_COLOR = (180, 140, 200)
+VISITED_COLOR = (150, 120, 180, 180)
+CURRENT_HIGHLIGHT = (200, 160, 220)
+VINTAGE_GOLD = (218, 165, 32)
+DARK_TEXT = (60, 50, 70)
+BUTTON_COLOR = (120, 100, 150)
+BUTTON_HOVER = (140, 120, 170)
+BORDER_COLOR = (70, 50, 90)
 
 class Button:
-    """Classe pour créer des boutons interactifs."""
+    """Interactive button with vintage styling."""
     
     def __init__(self, x: int, y: int, width: int, height: int, text: str, font: pygame.font.Font):
         self.rect = pygame.Rect(x, y, width, height)
@@ -43,7 +44,7 @@ class Button:
         self.is_clicked = False
     
     def handle_event(self, event: pygame.event.Event) -> bool:
-        """Gère les événements du bouton. Retourne True si cliqué."""
+        """Handle button events. Returns True if clicked."""
         if event.type == pygame.MOUSEMOTION:
             self.is_hovered = self.rect.collidepoint(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN:
@@ -55,82 +56,140 @@ class Button:
         return False
     
     def draw(self, screen: pygame.Surface):
-        """Dessine le bouton sur l'écran."""
-        color = BUTTON_HOVER_COLOR if self.is_hovered else BUTTON_COLOR
+        """Draw vintage-styled button."""
+        color = BUTTON_HOVER if self.is_hovered else BUTTON_COLOR
         if self.is_clicked:
-            color = tuple(max(0, c - 30) for c in color)
+            color = tuple(max(0, c - 20) for c in color)
         
-        pygame.draw.rect(screen, color, self.rect)
-        pygame.draw.rect(screen, BLACK, self.rect, 2)
+        # Draw button with ornate border
+        pygame.draw.rect(screen, color, self.rect, border_radius=5)
+        pygame.draw.rect(screen, VINTAGE_GOLD, self.rect, 3, border_radius=5)
+        pygame.draw.rect(screen, BORDER_COLOR, self.rect, 1, border_radius=5)
         
-        text_surface = self.font.render(self.text, True, WHITE)
+        # Draw text
+        text_surface = self.font.render(self.text, True, CREAM)
         text_rect = text_surface.get_rect(center=self.rect.center)
         screen.blit(text_surface, text_rect)
 
 class KnightTourGUI:
-    """Interface graphique pour visualiser le parcours du cavalier."""
+    """Vintage-styled GUI for Knight's Tour visualization."""
     
     def __init__(self):
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        pygame.display.set_caption("Knight's Tour Visualization")
+        pygame.display.set_caption("♞ Knight's Tour - Vintage Chess")
         self.clock = pygame.time.Clock()
         
-        # Polices
-        self.font = pygame.font.Font(None, 24)
-        self.small_font = pygame.font.Font(None, 18)
-        self.large_font = pygame.font.Font(None, 32)
+        # Load fonts
+        self.load_fonts()
         
-        # État de l'animation
+        # Load knight image
+        self.knight_image = self.load_knight_image()
+        
+        # Animation state
         self.solution_data: Optional[dict] = None
         self.path: List[Tuple[int, int]] = []
         self.is_animating = False
         self.animation_index = 0
-        self.animation_speed = 1.0  # Vitesse de l'animation
+        self.animation_speed = 1.5
         self.last_move_time = 0
-        self.knight_pos = (0, 0)  # Position actuelle du cavalier pour l'animation
-        self.target_pos = (0, 0)  # Position cible pour l'animation fluide
-        self.animation_progress = 1.0  # Progression de l'animation entre deux cases
+        self.knight_pos = (0, 0)
+        self.target_pos = (0, 0)
+        self.animation_progress = 1.0
         
-        # Boutons
+        # Visual effects
+        self.glow_intensity = 0
+        self.glow_direction = 1
+        
+        # Buttons
         self.buttons = self._create_buttons()
         
-        # Charger la solution si elle existe
+        # Load solution
         self.load_solution()
     
+    def load_fonts(self):
+        """Load fonts with fallback to system fonts."""
+        try:
+            if os.path.exists("fonts/SuperCrawler.ttf"):
+                self.title_font = pygame.font.Font("fonts/SuperCrawler.ttf", 48)
+                self.font = pygame.font.Font("fonts/SuperCrawler.ttf", 22)
+                self.small_font = pygame.font.Font("fonts/SuperCrawler.ttf", 16)
+                self.large_font = pygame.font.Font("fonts/SuperCrawler.ttf", 36)
+            else:
+                # Fallback to system fonts with vintage feel
+                self.title_font = pygame.font.SysFont('georgia', 48, bold=True)
+                self.font = pygame.font.SysFont('georgia', 22)
+                self.small_font = pygame.font.SysFont('georgia', 16)
+                self.large_font = pygame.font.SysFont('georgia', 36, bold=True)
+        except:
+            self.title_font = pygame.font.Font(None, 48)
+            self.font = pygame.font.Font(None, 22)
+            self.small_font = pygame.font.Font(None, 16)
+            self.large_font = pygame.font.Font(None, 36)
+    
+    def load_knight_image(self) -> Optional[pygame.Surface]:
+        """Load and scale the knight image."""
+        try:
+            if os.path.exists("assets/knight.png"):
+                image = pygame.image.load("assets/knight.png")
+                # Scale to fit cell with some padding
+                scaled_size = int(CELL_SIZE * 0.7)
+                image = pygame.transform.scale(image, (scaled_size, scaled_size))
+                return image
+            else:
+                print("Knight image not found. Using default representation.")
+                return None
+        except Exception as e:
+            print(f"Error loading knight image: {e}")
+            return None
+    
     def _create_buttons(self) -> List[Button]:
-        """Crée les boutons de contrôle."""
+        """Create control buttons."""
         buttons = []
-        button_x = BOARD_WIDTH + 10
-        button_width = SIDEBAR_WIDTH - 20
-        button_height = 40
+        button_x = BOARD_WIDTH + 20
+        button_width = SIDEBAR_WIDTH - 40
+        button_height = 45
+        start_y = 200
+        spacing = 55
         
-        buttons.append(Button(button_x, 50, button_width, button_height, "Load Solution", self.font))
-        buttons.append(Button(button_x, 100, button_width, button_height, "Start Animation", self.font))
-        buttons.append(Button(button_x, 150, button_width, button_height, "Reset", self.font))
-        buttons.append(Button(button_x, 200, button_width, button_height, "Speed +", self.font))
-        buttons.append(Button(button_x, 250, button_width, button_height, "Speed -", self.font))
-        buttons.append(Button(button_x, 300, button_width, button_height, "Repeat", self.font))
+        button_labels = [
+            "⟳ Load Solution",
+            "▶ Start Animation",
+            "⟲ Reset",
+            "⊕ Speed Up",
+            "⊖ Speed Down",
+            "↻ Replay"
+        ]
+        
+        for i, label in enumerate(button_labels):
+            buttons.append(Button(
+                button_x, 
+                start_y + i * spacing, 
+                button_width, 
+                button_height, 
+                label, 
+                self.font
+            ))
         
         return buttons
     
     def load_solution(self) -> bool:
-        """Charge la solution depuis le fichier JSON."""
+        """Load solution from JSON file."""
         try:
             if os.path.exists("knight_solution.json"):
                 with open("knight_solution.json", "r") as f:
                     self.solution_data = json.load(f)
                     self.path = self.solution_data["path"]
-                    print(f"Solution loaded: {len(self.path)} moves")
+                    print(f"✓ Solution loaded: {len(self.path)} moves")
                     return True
             else:
-                print("No solution file found. Run the console program first.")
+                print("⚠ No solution file found.")
                 return False
         except Exception as e:
-            print(f"Error loading solution: {e}")
+            print(f"✗ Error loading solution: {e}")
             return False
     
     def start_animation(self):
-        """Démarre l'animation du parcours."""
+        """Start the tour animation."""
         if self.path:
             self.is_animating = True
             self.animation_index = 0
@@ -138,58 +197,59 @@ class KnightTourGUI:
             self.target_pos = self.path[0]
             self.animation_progress = 1.0
             self.last_move_time = time.time()
-            print("Animation started")
+            print("▶ Animation started")
     
     def reset_animation(self):
-        """Remet l'animation à zéro."""
+        """Reset animation to beginning."""
         self.is_animating = False
         self.animation_index = 0
         if self.path:
             self.knight_pos = self.path[0]
             self.target_pos = self.path[0]
         self.animation_progress = 1.0
-        print("Animation reset")
+        print("⟲ Animation reset")
     
     def update_animation(self):
-        """Met à jour l'animation du cavalier."""
+        """Update knight animation."""
         if not self.is_animating or not self.path:
             return
         
         current_time = time.time()
-        time_per_move = 1.0 / self.animation_speed  # Temps en secondes par mouvement
+        time_per_move = 1.0 / self.animation_speed
         
-        # Calculer la progression de l'animation
         time_since_last_move = current_time - self.last_move_time
         self.animation_progress = min(1.0, time_since_last_move / time_per_move)
         
-        # Si l'animation actuelle est terminée, passer au mouvement suivant
         if self.animation_progress >= 1.0:
             self.animation_index += 1
             
             if self.animation_index < len(self.path):
-                # Définir la nouvelle cible
                 self.knight_pos = self.target_pos
                 self.target_pos = self.path[self.animation_index]
                 self.animation_progress = 0.0
                 self.last_move_time = current_time
             else:
-                # Animation terminée
                 self.is_animating = False
                 self.animation_progress = 1.0
-                print("Animation completed!")
+                print("✓ Animation completed!")
+        
+        # Update glow effect
+        self.glow_intensity += self.glow_direction * 2
+        if self.glow_intensity >= 40 or self.glow_intensity <= 0:
+            self.glow_direction *= -1
+        self.glow_intensity = max(0, min(40, self.glow_intensity))
     
     def get_animated_knight_position(self) -> Tuple[float, float]:
-        """Calcule la position interpolée du cavalier pour une animation fluide."""
+        """Calculate interpolated knight position."""
         if self.animation_progress >= 1.0:
             return self.target_pos
         
-        # Interpolation linéaire entre la position actuelle et la cible
         start_x, start_y = self.knight_pos
         target_x, target_y = self.target_pos
         
-        # Utiliser une courbe d'animation plus fluide (ease-in-out)
+        # Smooth easing function
         t = self.animation_progress
-        smooth_t = t * t * (3 - 2 * t)  # Fonction de lissage
+        smooth_t = t * t * (3 - 2 * t)
         
         animated_x = start_x + (target_x - start_x) * smooth_t
         animated_y = start_y + (target_y - start_y) * smooth_t
@@ -197,43 +257,76 @@ class KnightTourGUI:
         return (animated_x, animated_y)
     
     def draw_board(self):
-        """Dessine l'échiquier."""
+        """Draw vintage chessboard with ornate border."""
+        # Draw ornate border around board
+        border_width = 10
+        border_rect = pygame.Rect(-border_width, -border_width, 
+                                  BOARD_WIDTH + 2*border_width, 
+                                  BOARD_HEIGHT + 2*border_width)
+        pygame.draw.rect(self.screen, BORDER_COLOR, border_rect)
+        pygame.draw.rect(self.screen, VINTAGE_GOLD, border_rect, 4)
+        
+        # Draw squares
         for row in range(BOARD_SIZE):
             for col in range(BOARD_SIZE):
                 x = col * CELL_SIZE
                 y = row * CELL_SIZE
                 
-                # Couleur de la case (alternance)
                 if (row + col) % 2 == 0:
-                    color = LIGHT_BROWN
+                    color = LIGHT_SQUARE
                 else:
-                    color = DARK_BROWN
+                    color = DARK_SQUARE
                 
                 pygame.draw.rect(self.screen, color, (x, y, CELL_SIZE, CELL_SIZE))
+                
+                # Draw subtle inner border
+                pygame.draw.rect(self.screen, BORDER_COLOR, (x, y, CELL_SIZE, CELL_SIZE), 1)
+        
+        # Draw coordinate labels
+        for i in range(BOARD_SIZE):
+            # Column labels (a-h)
+            label = chr(97 + i)
+            text = self.small_font.render(label, True, VINTAGE_GOLD)
+            self.screen.blit(text, (i * CELL_SIZE + CELL_SIZE//2 - 5, BOARD_HEIGHT + 5))
+            
+            # Row labels (1-8)
+            label = str(BOARD_SIZE - i)
+            text = self.small_font.render(label, True, VINTAGE_GOLD)
+            self.screen.blit(text, (BOARD_WIDTH + 5, i * CELL_SIZE + CELL_SIZE//2 - 8))
     
     def draw_path(self):
-        """Dessine le chemin parcouru par le cavalier."""
+        """Draw the knight's path with vintage styling."""
         if not self.path:
             return
         
-        # Dessiner les cases visitées
         visited_count = min(self.animation_index + 1, len(self.path)) if self.is_animating else len(self.path)
         
+        # Draw visited squares with gradient effect
         for i in range(visited_count):
             x, y = self.path[i]
             screen_x = x * CELL_SIZE
             screen_y = y * CELL_SIZE
             
-            # Surligner la case visitée
-            pygame.draw.rect(self.screen, VISITED_COLOR, 
-                           (screen_x + 5, screen_y + 5, CELL_SIZE - 10, CELL_SIZE - 10))
+            # Create surface for transparency
+            overlay = pygame.Surface((CELL_SIZE - 10, CELL_SIZE - 10), pygame.SRCALPHA)
             
-            # Afficher le numéro du mouvement
-            text = self.small_font.render(str(i + 1), True, TEXT_COLOR)
-            text_rect = text.get_rect(center=(screen_x + CELL_SIZE // 2, screen_y + 15))
+            # Fade effect based on position in path
+            alpha = 100 + int(55 * (i / max(1, visited_count - 1)))
+            color_with_alpha = (*PATH_COLOR, alpha)
+            overlay.fill(color_with_alpha)
+            
+            self.screen.blit(overlay, (screen_x + 5, screen_y + 5))
+            
+            # Draw move number with ornate circle
+            circle_center = (screen_x + CELL_SIZE // 2, screen_y + CELL_SIZE // 2)
+            pygame.draw.circle(self.screen, VINTAGE_GOLD, circle_center, 16)
+            pygame.draw.circle(self.screen, DARK_SQUARE, circle_center, 14)
+            
+            text = self.small_font.render(str(i + 1), True, VINTAGE_GOLD)
+            text_rect = text.get_rect(center=circle_center)
             self.screen.blit(text, text_rect)
         
-        # Dessiner les lignes connectant le chemin
+        # Draw connecting path lines
         if visited_count > 1:
             points = []
             for i in range(visited_count):
@@ -243,85 +336,123 @@ class KnightTourGUI:
                 points.append((center_x, center_y))
             
             if len(points) > 1:
-                pygame.draw.lines(self.screen, PATH_COLOR, False, points, 3)
+                # Draw shadow line
+                shadow_points = [(p[0]+2, p[1]+2) for p in points]
+                pygame.draw.lines(self.screen, BORDER_COLOR, False, shadow_points, 4)
+                # Draw main line
+                pygame.draw.lines(self.screen, VINTAGE_GOLD, False, points, 3)
     
     def draw_knight(self):
-        """Dessine le cavalier à sa position actuelle."""
+        """Draw the knight piece."""
         if not self.path:
             return
         
-        # Obtenir la position animée du cavalier
         anim_x, anim_y = self.get_animated_knight_position()
         
-        # Convertir en coordonnées écran
         center_x = anim_x * CELL_SIZE + CELL_SIZE // 2
         center_y = anim_y * CELL_SIZE + CELL_SIZE // 2
         
-        # Dessiner le cavalier (cercle simple)
-        pygame.draw.circle(self.screen, KNIGHT_COLOR, (int(center_x), int(center_y)), 20)
-        pygame.draw.circle(self.screen, BLACK, (int(center_x), int(center_y)), 20, 3)
-        
-        # Ajouter un "K" pour Knight
-        text = self.font.render("K", True, WHITE)
-        text_rect = text.get_rect(center=(int(center_x), int(center_y)))
-        self.screen.blit(text, text_rect)
+        if self.knight_image:
+            # Draw glow effect when animating
+            if self.is_animating:
+                glow_surface = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+                glow_color = (*CURRENT_HIGHLIGHT, self.glow_intensity)
+                pygame.draw.circle(glow_surface, glow_color, 
+                                 (CELL_SIZE//2, CELL_SIZE//2), 
+                                 int(CELL_SIZE * 0.4))
+                glow_x = int(center_x - CELL_SIZE//2)
+                glow_y = int(center_y - CELL_SIZE//2)
+                self.screen.blit(glow_surface, (glow_x, glow_y))
+            
+            # Draw knight image
+            img_rect = self.knight_image.get_rect(center=(int(center_x), int(center_y)))
+            self.screen.blit(self.knight_image, img_rect)
+        else:
+            # Fallback: draw stylized knight symbol
+            pygame.draw.circle(self.screen, KNIGHT_PURPLE, (int(center_x), int(center_y)), 28)
+            pygame.draw.circle(self.screen, VINTAGE_GOLD, (int(center_x), int(center_y)), 28, 3)
+            pygame.draw.circle(self.screen, BORDER_COLOR, (int(center_x), int(center_y)), 25)
+            
+            text = self.large_font.render("♞", True, CREAM)
+            text_rect = text.get_rect(center=(int(center_x), int(center_y)))
+            self.screen.blit(text, text_rect)
     
     def draw_sidebar(self):
-        """Dessine la barre latérale avec les informations et contrôles."""
-        # Fond de la barre latérale
+        """Draw vintage-styled sidebar."""
         sidebar_rect = pygame.Rect(BOARD_WIDTH, 0, SIDEBAR_WIDTH, WINDOW_HEIGHT)
-        pygame.draw.rect(self.screen, WHITE, sidebar_rect)
-        pygame.draw.line(self.screen, BLACK, (BOARD_WIDTH, 0), (BOARD_WIDTH, WINDOW_HEIGHT), 2)
+        pygame.draw.rect(self.screen, CREAM, sidebar_rect)
+        pygame.draw.rect(self.screen, VINTAGE_GOLD, (BOARD_WIDTH, 0, 4, WINDOW_HEIGHT))
         
-        # Titre
-        title = self.large_font.render("Knight's Tour", True, TEXT_COLOR)
-        self.screen.blit(title, (BOARD_WIDTH + 10, 10))
+        # Decorative header
+        header_rect = pygame.Rect(BOARD_WIDTH, 0, SIDEBAR_WIDTH, 180)
+        pygame.draw.rect(self.screen, DARK_SQUARE, header_rect)
         
-        # Informations sur la solution
-        y_offset = 350
+        # Ornate title
+        title_lines = ["Knight's", "Tour"]
+        y_pos = 20
+        for line in title_lines:
+            title = self.title_font.render(line, True, VINTAGE_GOLD)
+            title_shadow = self.title_font.render(line, True, BORDER_COLOR)
+            x_center = BOARD_WIDTH + SIDEBAR_WIDTH // 2
+            
+            self.screen.blit(title_shadow, 
+                           title_shadow.get_rect(center=(x_center + 2, y_pos + 2)))
+            self.screen.blit(title, 
+                           title.get_rect(center=(x_center, y_pos)))
+            y_pos += 50
+        
+        # Vintage divider line
+        div_y = 180
+        pygame.draw.line(self.screen, VINTAGE_GOLD, 
+                        (BOARD_WIDTH + 20, div_y), 
+                        (BOARD_WIDTH + SIDEBAR_WIDTH - 20, div_y), 3)
+        
+        # Information panel
         if self.solution_data:
+            info_y = 520
             info_texts = [
-                f"Total Moves: {len(self.path)}",
-                f"Fitness: {self.solution_data.get('fitness', 0)}/64",
-                f"Speed: {self.animation_speed:.1f}x",
-                f"Current Move: {min(self.animation_index + 1, len(self.path)) if self.path else 0}"
+                ("Moves", f"{len(self.path)}/64"),
+                ("Speed", f"{self.animation_speed:.1f}×"),
+                ("Progress", f"{min(self.animation_index + 1, len(self.path)) if self.path else 0}")
             ]
             
-            for i, text in enumerate(info_texts):
-                rendered_text = self.font.render(text, True, TEXT_COLOR)
-                self.screen.blit(rendered_text, (BOARD_WIDTH + 10, y_offset + i * 25))
+            for label, value in info_texts:
+                label_text = self.font.render(label + ":", True, DARK_TEXT)
+                value_text = self.font.render(value, True, KNIGHT_PURPLE)
+                
+                self.screen.blit(label_text, (BOARD_WIDTH + 25, info_y))
+                self.screen.blit(value_text, (BOARD_WIDTH + 180, info_y))
+                info_y += 30
         
-        # Status
-        status_y = y_offset + 120
+        # Status indicator
+        status_y = 620
         if self.is_animating:
-            status_text = "Status: Animating..."
-            status_color = (0, 150, 0)
+            status = "◉ Animating"
+            color = (100, 180, 100)
         elif self.path:
-            status_text = "Status: Ready"
-            status_color = (0, 100, 200)
+            status = "◎ Ready"
+            color = KNIGHT_PURPLE
         else:
-            status_text = "Status: No Solution"
-            status_color = (200, 0, 0)
+            status = "○ No Solution"
+            color = (180, 100, 100)
         
-        status_surface = self.font.render(status_text, True, status_color)
-        self.screen.blit(status_surface, (BOARD_WIDTH + 10, status_y))
+        status_surface = self.font.render(status, True, color)
+        self.screen.blit(status_surface, (BOARD_WIDTH + 25, status_y))
         
-        # Dessiner les boutons
+        # Draw buttons
         for button in self.buttons:
             button.draw(self.screen)
     
     def handle_events(self):
-        """Gère les événements de l'interface."""
+        """Handle user input events."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
             
-            # Gérer les événements des boutons
             for i, button in enumerate(self.buttons):
                 if button.handle_event(event):
                     self.handle_button_click(i)
             
-            # Contrôles clavier
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     if self.is_animating:
@@ -332,7 +463,7 @@ class KnightTourGUI:
                     self.reset_animation()
                 elif event.key == pygame.K_l:
                     self.load_solution()
-                elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
+                elif event.key in (pygame.K_PLUS, pygame.K_EQUALS):
                     self.animation_speed = min(5.0, self.animation_speed + 0.5)
                 elif event.key == pygame.K_MINUS:
                     self.animation_speed = max(0.5, self.animation_speed - 0.5)
@@ -340,41 +471,37 @@ class KnightTourGUI:
         return True
     
     def handle_button_click(self, button_index: int):
-        """Gère les clics sur les boutons."""
-        if button_index == 0:  # Load Solution
-            self.load_solution()
-        elif button_index == 1:  # Start Animation
-            if not self.is_animating:
-                self.start_animation()
-        elif button_index == 2:  # Reset
-            self.reset_animation()
-        elif button_index == 3:  # Speed +
-            self.animation_speed = min(5.0, self.animation_speed + 0.5)
-        elif button_index == 4:  # Speed -
-            self.animation_speed = max(0.5, self.animation_speed - 0.5)
-        elif button_index == 5:  # Repeat
-            self.reset_animation()
-            if self.path:
-                self.start_animation()
+        """Handle button click actions."""
+        actions = [
+            lambda: self.load_solution(),
+            lambda: self.start_animation() if not self.is_animating else None,
+            lambda: self.reset_animation(),
+            lambda: setattr(self, 'animation_speed', min(5.0, self.animation_speed + 0.5)),
+            lambda: setattr(self, 'animation_speed', max(0.5, self.animation_speed - 0.5)),
+            lambda: (self.reset_animation(), self.start_animation() if self.path else None)
+        ]
+        
+        if button_index < len(actions):
+            actions[button_index]()
     
     def run(self):
-        """Boucle principale de l'interface."""
-        print("Knight's Tour GUI started")
-        print("Controls:")
-        print("- Space: Start/Stop animation")
-        print("- R: Reset animation")
-        print("- L: Load solution")
-        print("- +/-: Change animation speed")
+        """Main game loop."""
+        print("╔══════════════════════════════════╗")
+        print("║   Knight's Tour - Vintage GUI    ║")
+        print("╚══════════════════════════════════╝")
+        print("\n⌨ Controls:")
+        print("  Space  : Start/Stop animation")
+        print("  R      : Reset")
+        print("  L      : Load solution")
+        print("  +/-    : Adjust speed\n")
         
         running = True
         while running:
             running = self.handle_events()
-            
-            # Mettre à jour l'animation
             self.update_animation()
             
-            # Dessiner tout
-            self.screen.fill(WHITE)
+            # Render
+            self.screen.fill(CREAM)
             self.draw_board()
             self.draw_path()
             self.draw_knight()
@@ -387,16 +514,18 @@ class KnightTourGUI:
         sys.exit()
 
 def main():
-    """Point d'entrée principal."""
+    """Entry point."""
     try:
         gui = KnightTourGUI()
         gui.run()
     except KeyboardInterrupt:
-        print("\nProgram interrupted by user")
+        print("\n✓ Program terminated by user")
         pygame.quit()
         sys.exit()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"✗ Error: {e}")
+        import traceback
+        traceback.print_exc()
         pygame.quit()
         sys.exit(1)
 
